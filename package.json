@@ -1,0 +1,26 @@
+{
+  "name": "workaround",
+  "version": "1.0.0",
+  "description": "A class schedule builder that plans around your job instead of ignoring it.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Carsten",
+  "scripts": {
+    "test": "tsx src/lib/lib.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.11",
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reaver1732/workaround.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/Reaver1732/workaround/issues"
+  },
+  "homepage": "https://github.com/Reaver1732/workaround#readme"
+}
