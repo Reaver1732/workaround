@@ -1,0 +1,99 @@
+// WorkAround section dataset.
+//
+// All times live in Meeting as integer minutes since midnight. There is no
+// DateTime anywhere in this schema on purpose: the domain layer in src/lib
+// does pure integer interval math and never touches a timezone.
+//
+// Intervals are HALF-OPEN, [startMin, endMin). A class ending at 650 and a
+// shift starting at 650 do not overlap.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// How a section delivers content. Drives whether Meeting rows exist at all.
+enum Mode {
+  IN_PERSON
+  HYBRID
+  ONLINE_SYNC
+  ONLINE_ASYNC
+}
+
+// What a given meeting pattern is for. A lecture and its lab are two Meeting
+// rows on ONE Section, and they are not interchangeable to a student.
+enum MeetingKind {
+  LECTURE
+  LAB
+  DISCUSSION
+  SEMINAR
+  OTHER
+}
+
+model Course {
+  // Surrogate key. Sections point at this, not at (subject, number).
+  id       String    @id @default(cuid())
+  // Subject code as the SIS prints it, e.g. "COMP SCI".
+  subject  String
+  // Catalog number as a STRING: "202", "245L", "101H" all occur.
+  number   String
+  // Full catalog title.
+  title    String
+  // Credit hours awarded.
+  credits  Int
+  // Every offered section of this course.
+  sections Section[]
+
+  @@unique([subject, number])
+}
+
+model Section {
+  // Surrogate key.
+  id          String    @id @default(cuid())
+  // Owning course.
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // Registration code shown to students, e.g. "001", "L02".
+  sectionCode String
+  // SIS class number the student types to enroll. Optional and a String:
+  // hand-pasted schedules often omit it, and leading zeros are meaningful.
+  classNbr    String?
+  // Term this section runs in, e.g. "FALL2026".
+  term        String
+  // Instructor of record. Null while the SIS still says "Staff".
+  instructor  String?
+  // Delivery mode. ONLINE_ASYNC sections carry zero Meeting rows.
+  mode        Mode
+  // Every meeting pattern. A lecture plus its lab is TWO rows, ONE Section.
+  meetings    Meeting[]
+
+  @@unique([term, courseId, sectionCode])
+  @@index([courseId])
+  @@index([term])
+}
+
+model Meeting {
+  // Surrogate key.
+  id        String      @id @default(cuid())
+  // Owning section.
+  sectionId String
+  section   Section     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  // Day codes matching Day in src/lib/time.ts: "MO","TU","WE","TH","FR","SA","SU".
+  days      String[]
+  // Start of the meeting, minutes since midnight. Inclusive.
+  startMin  Int
+  // End of the meeting, minutes since midnight. Exclusive.
+  endMin    Int
+  // What this pattern is: the lecture, its lab, a discussion section.
+  kind      MeetingKind @default(LECTURE)
+  // Building name. Null when the meeting is online at a fixed time.
+  building  String?
+  // Room number. Null when the meeting is online at a fixed time.
+  room      String?
+
+  @@index([sectionId])
+}
