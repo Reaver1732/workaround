@@ -17,20 +17,23 @@
  *
  * TWO KINDS OF DATA LIVE HERE:
  *
- *   REAL      Five sections actually registered for fall 2026. They carry a
- *             real classNbr and a numeric sectionCode ("0002").
- *   SAMPLE    Alternates invented to give the solver a search space. They
- *             carry classNbr = null and a sectionCode prefixed "ALT".
- *             They are NOT real UWGB offerings. Do not show them to anyone
- *             as if they were.
+ *   REAL      Five sections actually registered for fall 2026. isSample=false.
+ *             They carry a real classNbr and a numeric sectionCode ("0002").
+ *   SAMPLE    Alternates invented to give the solver a search space.
+ *             isSample=true. They are NOT real UWGB offerings. Do not show
+ *             them to anyone as if they were.
  *
- * The schema has no boolean column for this, so `classNbr IS NULL` and the
- * "ALT" prefix are the only in-database markers.
+ * Section.isSample is the single source of truth and is always declared.
+ * The "ALT" section-code prefix is a readability convention only: nothing
+ * branches on it, because the CSV importer will produce real sections with a
+ * null classNbr and non-numeric section codes.
  *
  * Run (after prisma generate + migrate): npx tsx prisma/seed.ts
  */
 
+import { existsSync } from 'node:fs';
 import { PrismaClient, Mode, MeetingKind } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { parseMeetingPattern } from '../src/lib/parseMeetingPattern';
 import { computeWorkHours } from '../src/lib/workHours';
 import { formatDuration } from '../src/lib/time';
@@ -68,6 +71,9 @@ interface SeedSection {
   sectionCode: string;
   // SIS class number. Set only on the five really-registered sections.
   classNbr: string | null;
+  // True for invented demo data, false for a real offering. Declared, never
+  // inferred: a real imported row can legitimately have a null classNbr.
+  isSample: boolean;
   // Instructor of record, or null for "Staff".
   instructor: string | null;
   // Delivery mode. ONLINE_ASYNC must carry zero meetings.
@@ -104,6 +110,7 @@ const CATALOG: SeedCourse[] = [
         // REAL. As registered.
         sectionCode: '0002',
         classNbr: '2675',
+        isSample: false,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -115,6 +122,7 @@ const CATALOG: SeedCourse[] = [
         // fixed point that makes their calendars look so similar.
         sectionCode: `${SAMPLE_PREFIX}1`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -125,6 +133,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE. Lecture plus a separate Friday lab on one section.
         sectionCode: `${SAMPLE_PREFIX}2`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -136,6 +145,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE. Fully asynchronous, so zero meetings by design.
         sectionCode: `${SAMPLE_PREFIX}3`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.ONLINE_ASYNC,
         meetings: [],
@@ -153,6 +163,7 @@ const CATALOG: SeedCourse[] = [
         // REAL. As registered.
         sectionCode: '0002',
         classNbr: '1250',
+        isSample: false,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -164,6 +175,7 @@ const CATALOG: SeedCourse[] = [
         // difference between a workable Tuesday and a shredded one.
         sectionCode: `${SAMPLE_PREFIX}1`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -174,6 +186,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}2`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -184,6 +197,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}3`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.ONLINE_ASYNC,
         meetings: [],
@@ -201,6 +215,7 @@ const CATALOG: SeedCourse[] = [
         // REAL. As registered.
         sectionCode: '0003',
         classNbr: '1769',
+        isSample: false,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -211,6 +226,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}1`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -221,6 +237,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}2`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -231,6 +248,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE. Meets live online: a real time block, but no room.
         sectionCode: `${SAMPLE_PREFIX}3`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.ONLINE_SYNC,
         meetings: [
@@ -250,6 +268,7 @@ const CATALOG: SeedCourse[] = [
         // REAL. As registered.
         sectionCode: '0008',
         classNbr: '2387',
+        isSample: false,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -260,6 +279,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}1`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -270,6 +290,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}2`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -280,6 +301,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}3`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.ONLINE_ASYNC,
         meetings: [],
@@ -297,6 +319,7 @@ const CATALOG: SeedCourse[] = [
         // REAL. As registered.
         sectionCode: '0002',
         classNbr: '2230',
+        isSample: false,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -307,6 +330,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}1`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -317,6 +341,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE.
         sectionCode: `${SAMPLE_PREFIX}2`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.IN_PERSON,
         meetings: [
@@ -327,6 +352,7 @@ const CATALOG: SeedCourse[] = [
         // SAMPLE. Lecture plus a short Friday discussion on one section.
         sectionCode: `${SAMPLE_PREFIX}3`,
         classNbr: null,
+        isSample: true,
         instructor: null,
         mode: Mode.HYBRID,
         meetings: [
@@ -506,7 +532,11 @@ function toMeetingRow(sectionLabel: string, meeting: SeedMeeting) {
 
 /**
  * Enforce two invariants the schema cannot express: ONLINE_ASYNC means zero
- * Meeting rows, and only really-registered sections carry a classNbr.
+ * Meeting rows, and invented data is labelled as such.
+ *
+ * Note what is NOT checked here. Sample-ness is never inferred from classNbr
+ * or from the section code, because the CSV importer will produce genuinely
+ * real sections with a null classNbr. isSample has to be declared.
  */
 function assertSectionSane(sectionLabel: string, section: SeedSection): void {
   if (section.mode === Mode.ONLINE_ASYNC && section.meetings.length > 0) {
@@ -516,17 +546,10 @@ function assertSectionSane(sectionLabel: string, section: SeedSection): void {
     throw new Error(`${sectionLabel}: only ONLINE_ASYNC sections may have zero meetings.`);
   }
 
-  const isSample = section.sectionCode.startsWith(SAMPLE_PREFIX);
-  if (isSample === true && section.classNbr !== null) {
+  if (section.isSample === true && section.classNbr !== null) {
     throw new Error(
-      `${sectionLabel}: sample sections must have classNbr = null. ` +
-      `A class number implies this is a real offering.`
-    );
-  }
-  if (isSample === false && section.classNbr === null) {
-    throw new Error(
-      `${sectionLabel}: real sections must carry their classNbr. ` +
-      `If this is invented data, prefix the section code with "${SAMPLE_PREFIX}".`
+      `${sectionLabel}: a sample section must not carry a class number. ` +
+      `A real classNbr on invented data is how fake sections get mistaken for real ones.`
     );
   }
 }
@@ -572,6 +595,7 @@ async function seedCatalog(client: PrismaClient): Promise<void> {
         },
         update: {
           classNbr: sectionSeed.classNbr,
+          isSample: sectionSeed.isSample,
           instructor: sectionSeed.instructor,
           mode: sectionSeed.mode,
         },
@@ -579,6 +603,7 @@ async function seedCatalog(client: PrismaClient): Promise<void> {
           courseId: course.id,
           sectionCode: sectionSeed.sectionCode,
           classNbr: sectionSeed.classNbr,
+          isSample: sectionSeed.isSample,
           term: TERM,
           instructor: sectionSeed.instructor,
           mode: sectionSeed.mode,
@@ -593,9 +618,9 @@ async function seedCatalog(client: PrismaClient): Promise<void> {
         await client.meeting.create({ data: { sectionId: section.id, ...rows[k] } });
       }
 
-      let origin = 'SAMPLE';
-      if (sectionSeed.classNbr !== null) {
-        origin = 'REAL  ';
+      let origin = 'REAL  ';
+      if (section.isSample === true) {
+        origin = 'SAMPLE';
       }
       console.log(
         `  ${origin}  ${sectionLabel.padEnd(22)} ${sectionSeed.mode.padEnd(13)} ` +
@@ -853,8 +878,28 @@ async function verifyAlternates(client: PrismaClient): Promise<void> {
 
 // --------------------------------------------------------------------------
 
+/**
+ * Prisma 7 requires an explicit driver adapter. The connection string is read
+ * from the environment and handed straight to the adapter; it is never logged
+ * and never written anywhere.
+ */
+function connect(): PrismaClient {
+  // Present when run via `prisma db seed`, which inherits the CLI's env.
+  // Loaded here too so `npx tsx prisma/seed.ts` works on its own.
+  if (process.env.DATABASE_URL === undefined && existsSync('.env') === true) {
+    process.loadEnvFile('.env');
+  }
+
+  const connectionString = process.env.DATABASE_URL;
+  if (connectionString === undefined || connectionString === '') {
+    throw new Error('DATABASE_URL is not set. Add it to .env before seeding.');
+  }
+
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
 async function main(): Promise<void> {
-  const client = new PrismaClient();
+  const client = connect();
 
   try {
     console.log(`Seeding ${TERM}...`);

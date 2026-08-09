@@ -7,9 +7,10 @@
 // Intervals are HALF-OPEN, [startMin, endMin). A class ending at 650 and a
 // shift starting at 650 do not overlap.
 
+// Prisma 7 no longer accepts a connection URL here. It lives in
+// prisma.config.ts at the repo root, read from DATABASE_URL.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -68,6 +69,11 @@ model Section {
   instructor  String?
   // Delivery mode. ONLINE_ASYNC sections carry zero Meeting rows.
   mode        Mode
+  // True for invented demo data, false for a real offering. Explicit because
+  // it cannot be inferred: the CSV importer produces real rows with a null
+  // classNbr, so "no class number" stops meaning "not real" precisely when
+  // that distinction starts to matter.
+  isSample    Boolean   @default(false)
   // Every meeting pattern. A lecture plus its lab is TWO rows, ONE Section.
   meetings    Meeting[]
 
