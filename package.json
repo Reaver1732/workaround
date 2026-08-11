@@ -6,15 +6,17 @@
   "license": "MIT",
   "author": "Carsten",
   "scripts": {
+    "build": "prisma generate",
+    "start": "prisma migrate deploy && tsx src/server/index.ts",
+    "dev": "tsx watch src/server/index.ts",
     "test": "tsx src/lib/lib.test.ts && tsx src/lib/generateSchedules.test.ts",
     "typecheck": "tsc --noEmit",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
-    "prisma": "^7.9.1",
-    "tsx": "^4.23.11",
     "typescript": "^7.0.2"
   },
   "repository": {
@@ -28,6 +30,9 @@
   "homepage": "https://github.com/Reaver1732/workaround#readme",
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1"
+    "@prisma/client": "^7.9.1",
+    "express": "^5.2.1",
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.12"
   }
 }

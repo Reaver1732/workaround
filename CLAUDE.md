@@ -140,3 +140,23 @@ evidence that the project was built inside the entry window.
 An institutional read-only screen: given the full section dataset, surface
 which required courses are offered ONLY in blocks that collide with common
 work shifts. No user input needed.
+
+## .gitignore
+Verified correct via `git check-ignore -v .env` (matches .gitignore:4).
+If a tool reports it as empty, that read is stale. Do not act on it.
+
+## Deploy
+railway.json: build = `prisma generate`, start = `prisma migrate deploy`
+then `tsx src/server/index.ts`. Healthcheck /api/health.
+Never `migrate dev` in production.
+
+Railway services: the app service, plus Postgres instances named
+`workaround-db` (prod) and `workaround-db-dev`. The app service sets
+DATABASE_URL = ${{workaround-db.DATABASE_URL}} — the reference must match
+the real service name, not `Postgres`.
+
+Known tradeoff: the server runs through tsx rather than compiled JS,
+because src/lib uses extensionless relative imports and src/lib is settled.
+tsx and prisma are therefore runtime dependencies, not dev. Optional later
+cleanup: bundle the server with esbuild, which resolves the imports at build
+time and removes both from production. Not a priority before Aug 18.
