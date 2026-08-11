@@ -9,7 +9,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "prisma generate",
+    "build": "prisma generate && vite build",
+    "dev:client": "vite",
     "start": "prisma migrate deploy && tsx src/server/index.ts",
     "dev": "tsx watch src/server/index.ts",
     "test": "tsx src/lib/lib.test.ts && tsx src/lib/generateSchedules.test.ts",
@@ -18,9 +19,15 @@
     "db:reset": "prisma migrate reset --force"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.2.0",
-    "typescript": "^7.0.2"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
   },
   "repository": {
     "type": "git",
@@ -36,6 +43,8 @@
     "@prisma/client": "^7.9.1",
     "express": "^5.2.1",
     "prisma": "^7.9.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tsx": "^4.23.12"
   }
 }
