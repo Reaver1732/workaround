@@ -6,7 +6,7 @@
   "license": "MIT",
   "author": "Carsten",
   "scripts": {
-    "test": "tsx src/lib/lib.test.ts",
+    "test": "tsx src/lib/lib.test.ts && tsx src/lib/generateSchedules.test.ts",
     "typecheck": "tsc --noEmit",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force"
