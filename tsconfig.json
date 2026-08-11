@@ -18,5 +18,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src", "prisma"]
+  "include": ["src", "prisma", "prisma.config.ts"]
 }
