@@ -23,8 +23,13 @@ export default defineConfig({
     },
     // In dev the API runs separately on 3000. In production Express serves
     // the built bundle out of dist/ and there is no proxy.
+    //
+    // The key is a regex, not the plain string '/api'. A string key matches by
+    // prefix, which also catches the client's own /api.ts module request: Vite
+    // hands it to Express, Express answers with HTML, and the browser refuses
+    // the module for its MIME type, leaving a blank page in dev only.
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      '^/api/': { target: 'http://localhost:3000', changeOrigin: true },
     },
   },
   build: {

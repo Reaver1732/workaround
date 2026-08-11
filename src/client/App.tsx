@@ -277,35 +277,63 @@ export default function App() {
 
   let mainColumn = null;
   if (selected === null) {
-    mainColumn = <Diagnostics diagnostics={result.diagnostics} hasSchedules={false} />;
+    mainColumn = (
+      <div className="xl:col-span-2">
+        <Diagnostics diagnostics={result.diagnostics} hasSchedules={false} />
+      </div>
+    );
   } else {
     mainColumn = (
       <>
-        <Hero
-          best={bestWork}
-          bestWithoutCommute={bestWithoutCommute}
-          registered={registeredWork}
-          commuteMinutes={commuteMinutes}
-          hourlyWage={parsedWage}
-          targetHoursPerWeek={targetHoursPerWeek}
-        />
-        <Diagnostics diagnostics={result.diagnostics} hasSchedules={true} />
-        <WeekGrid days={dayBands} minShiftMinutes={minShiftMinutes} />
-        <ScheduleList
-          schedules={result.schedules}
-          selectedIndex={safeIndex}
-          onSelect={setSelectedIndex}
-          targetHoursPerWeek={targetHoursPerWeek}
-          sectionNames={sectionNames}
-          registeredPin={registeredPin}
-        />
+        {/* Pinned across the whole column. The headline number never scrolls
+            away from the slider. */}
+        <div className="xl:col-span-2">
+          <Hero
+            best={bestWork}
+            bestWithoutCommute={bestWithoutCommute}
+            registered={registeredWork}
+            commuteMinutes={commuteMinutes}
+            hourlyWage={parsedWage}
+            targetHoursPerWeek={targetHoursPerWeek}
+          />
+        </div>
+
+        {/* The week and the ranking sit side by side rather than stacked, and
+            each scrolls on its own. Stacked, the 520px week grid pushes the
+            first ranked row to y=1277 at 1366x768, so the two things a judge
+            is meant to compare never share a screen. */}
+        <div className="space-y-4 xl:min-h-0 xl:overflow-y-auto xl:pr-2">
+          <Diagnostics diagnostics={result.diagnostics} hasSchedules={true} />
+          <WeekGrid days={dayBands} minShiftMinutes={minShiftMinutes} />
+        </div>
+
+        {/* Capped rather than page-length between lg and xl, so the ranking
+            scrolls in place instead of dragging the whole page past the hero. */}
+        <div className="lg:max-h-[70vh] lg:overflow-y-auto xl:max-h-none xl:min-h-0 xl:pr-1">
+          <ScheduleList
+            schedules={result.schedules}
+            selectedIndex={safeIndex}
+            onSelect={setSelectedIndex}
+            targetHoursPerWeek={targetHoursPerWeek}
+            sectionNames={sectionNames}
+            registeredPin={registeredPin}
+          />
+        </div>
       </>
     );
   }
 
+  // Three layouts, by width.
+  //
+  //   below lg   one column, ordinary document, controls first, no sticky
+  //   lg to xl   two columns; the controls stick and scroll on their own and
+  //              the ranked list is capped, but the page still scrolls. Three
+  //              panes do not fit: at 1024 the week grid would get 164px.
+  //   xl and up  the viewport is the frame. The page itself never scrolls and
+  //              every pane owns its scrolling. This is the 1366x768 case.
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-slate-100 xl:flex xl:h-screen xl:flex-col xl:overflow-hidden">
+      <header className="border-b border-slate-200 bg-white xl:flex-none">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">WorkAround</h1>
           <p className="text-sm text-slate-600">
@@ -314,8 +342,10 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[380px_1fr]">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+      <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[396px_1fr] lg:gap-4 lg:py-4 xl:min-h-0 xl:flex-1 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
+        {/* 396px, not 380: the scrollbar takes 15 of them and the day rows
+            below need 373 to sit on one line. */}
+        <aside className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto xl:max-h-none xl:min-h-0 xl:self-auto">
           <Controls
             commuteMinutes={commuteMinutes}
             onCommuteChange={setCommuteMinutes}
@@ -333,7 +363,9 @@ export default function App() {
           />
         </aside>
 
-        <section className="space-y-6">{mainColumn}</section>
+        <section className="grid min-w-0 grid-cols-1 gap-6 lg:gap-4 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_400px] xl:grid-rows-[auto_minmax(0,1fr)]">
+          {mainColumn}
+        </section>
       </main>
     </div>
   );

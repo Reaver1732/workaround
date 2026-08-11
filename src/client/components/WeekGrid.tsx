@@ -112,8 +112,8 @@ export default function WeekGrid(props: Props) {
 
   return (
     <div>
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-700 uppercase">
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-semibold tracking-wide whitespace-nowrap text-slate-700 uppercase">
           The week
         </h2>
         <div className="flex flex-wrap gap-3 text-[11px] text-slate-600">

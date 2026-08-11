@@ -120,10 +120,12 @@ export default function Hero(props: Props) {
     }
 
     comparison = (
-      <div className="mt-4 border-t border-slate-700 pt-3">
-        <div className="flex items-baseline justify-between gap-3">
+      <div className="mt-4 border-t border-slate-700 pt-3 xl:mt-0 xl:border-t-0 xl:pt-0">
+        {/* Stacked in the narrower right-hand column, side by side when the
+            card is one column and there is room for both on a line. */}
+        <div className="flex items-baseline justify-between gap-3 xl:block">
           <span className="text-sm text-slate-400">Your registered schedule</span>
-          <span className="text-2xl font-semibold tabular-nums text-slate-200">
+          <span className="text-2xl font-semibold tabular-nums text-slate-200 xl:block">
             {registeredHours.toFixed(2)}
             <span className="ml-1 text-sm font-normal text-slate-400">h / week</span>
             {registeredPay}
@@ -149,26 +151,34 @@ export default function Hero(props: Props) {
     );
   }
 
+  // Two columns from xl up: headline left, the comparison that makes the point
+  // right. Stacked, this card runs 450px tall and starves the week grid on a
+  // 768px-high laptop. Below xl it is one column, in the original order.
   return (
-    <div className="rounded-xl bg-slate-900 p-6 text-slate-100">
-      <div className="text-sm tracking-wide text-slate-400 uppercase">
-        Best available schedule
+    <div className="rounded-xl bg-slate-900 p-6 text-slate-100 xl:grid xl:grid-cols-2 xl:items-start xl:gap-6 xl:p-5">
+      <div>
+        <div className="text-sm tracking-wide text-slate-400 uppercase">
+          Best available schedule
+        </div>
+        <div className="mt-1 flex items-baseline gap-3">
+          <span className="text-6xl font-bold tabular-nums tracking-tight">
+            {hours.toFixed(2)}
+          </span>
+          <span className="text-xl text-slate-400">hours / week</span>
+        </div>
+        {payLine}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {targetBadge}
+          <span className="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300">
+            {humanMinutes(props.best.fragmentedMinutes)} wasted in slivers
+          </span>
+        </div>
       </div>
-      <div className="mt-1 flex items-baseline gap-3">
-        <span className="text-6xl font-bold tabular-nums tracking-tight">
-          {hours.toFixed(2)}
-        </span>
-        <span className="text-xl text-slate-400">hours / week</span>
+
+      <div className="xl:border-l xl:border-slate-700 xl:pl-6">
+        {comparison}
+        {costLine}
       </div>
-      {payLine}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {targetBadge}
-        <span className="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300">
-          {humanMinutes(props.best.fragmentedMinutes)} wasted in slivers
-        </span>
-      </div>
-      {comparison}
-      {costLine}
     </div>
   );
 }
