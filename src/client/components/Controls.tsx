@@ -1,8 +1,15 @@
 /**
- * Everything the student can change. The commute slider is deliberately the
+ * Everything the student can change. The drive time slider is deliberately the
  * largest control on the page: it is the one number every other planner
  * pretends is zero.
+ *
+ * Both sliders carry a number box beside them. The slider track is sized for
+ * the range people actually drag through, and the box takes the values past
+ * the end of it without stretching the track and ruining fine control where it
+ * matters.
  */
+
+import type { FocusEvent } from 'react';
 
 import type { ApiCourse } from '../api';
 import {
@@ -23,8 +30,9 @@ interface Props {
   onMinShiftChange: (value: number) => void;
   availability: AvailabilityMap;
   onAvailabilityChange: (next: AvailabilityMap) => void;
-  targetHoursPerWeek: number;
-  onTargetChange: (value: number) => void;
+  // Raw text, so the field can be emptied while it is being edited.
+  targetHoursPerWeek: string;
+  onTargetChange: (value: string) => void;
   hourlyWage: string;
   onWageChange: (value: string) => void;
   courses: ApiCourse[];
@@ -32,7 +40,45 @@ interface Props {
   onSelectionChange: (next: Record<string, string[]>) => void;
 }
 
+/** step= on <input type="time"> is in seconds, so 15 minutes is 900. */
+const QUARTER_HOUR_SECONDS = 900;
+
+// How far each slider track runs, and how far the box beside it will go.
+const COMMUTE_SLIDER_MAX = 60;
+const COMMUTE_MAX = 120;
+const MIN_SHIFT_SLIDER_MAX = 180;
+const MIN_SHIFT_MAX = 240;
+
+function clampMinutes(value: number, max: number): number {
+  if (value < 0) {
+    return 0;
+  }
+  if (value > max) {
+    return max;
+  }
+  return value;
+}
+
+/** Parsed minutes, or null when the box holds something we cannot use yet. */
+function parseMinutes(text: string, max: number): number | null {
+  if (text.trim() === '') {
+    return null;
+  }
+
+  const value = Number(text);
+  if (Number.isFinite(value) === false) {
+    return null;
+  }
+
+  return clampMinutes(Math.round(value), max);
+}
+
 export default function Controls(props: Props) {
+  // Typing over a number box should replace it, not append to it.
+  function selectOnFocus(event: FocusEvent<HTMLInputElement>) {
+    event.target.select();
+  }
+
   function setDay(day: string, patch: Partial<{ enabled: boolean; start: number; end: number }>) {
     const next: AvailabilityMap = { ...props.availability };
     next[day] = { ...next[day], ...patch };
@@ -77,6 +123,7 @@ export default function Controls(props: Props) {
         </label>
         <input
           type="time"
+          step={QUARTER_HOUR_SECONDS}
           value={toTimeValue(row.start)}
           disabled={row.enabled === false}
           onChange={(event) => {
@@ -90,6 +137,7 @@ export default function Controls(props: Props) {
         <span className="text-slate-400">to</span>
         <input
           type="time"
+          step={QUARTER_HOUR_SECONDS}
           value={toTimeValue(row.end)}
           disabled={row.enabled === false}
           onChange={(event) => {
@@ -150,30 +198,50 @@ export default function Controls(props: Props) {
       <div className="rounded-xl border-2 border-emerald-600 bg-emerald-50 p-4">
         <div className="flex items-baseline justify-between">
           <label htmlFor="commute" className="text-sm font-semibold tracking-wide text-emerald-900 uppercase">
-            Commute, one way
+            Drive time, one way
           </label>
           <span className="text-3xl font-bold tabular-nums text-emerald-800">
             {props.commuteMinutes}
             <span className="ml-1 text-base font-medium">min</span>
           </span>
         </div>
-        <input
-          id="commute"
-          type="range"
-          min={0}
-          max={45}
-          step={1}
-          value={props.commuteMinutes}
-          onChange={(event) => props.onCommuteChange(Number(event.target.value))}
-          className="mt-3 h-3 w-full cursor-pointer accent-emerald-600"
-        />
-        <div className="mt-1 flex justify-between text-xs text-emerald-700">
-          <span>0 (work on campus)</span>
-          <span>45 min</span>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex-1">
+            <input
+              id="commute"
+              type="range"
+              min={0}
+              max={COMMUTE_SLIDER_MAX}
+              step={1}
+              value={clampMinutes(props.commuteMinutes, COMMUTE_SLIDER_MAX)}
+              onChange={(event) => props.onCommuteChange(Number(event.target.value))}
+              className="h-3 w-full cursor-pointer accent-emerald-600"
+            />
+            <div className="mt-1 flex justify-between text-xs text-emerald-700">
+              <span>0 (work on campus)</span>
+              <span>{COMMUTE_SLIDER_MAX} min</span>
+            </div>
+          </div>
+          <input
+            type="number"
+            min={0}
+            max={COMMUTE_MAX}
+            step={1}
+            aria-label="Drive time in minutes"
+            value={props.commuteMinutes}
+            onFocus={selectOnFocus}
+            onChange={(event) => {
+              const parsed = parseMinutes(event.target.value, COMMUTE_MAX);
+              if (parsed !== null) {
+                props.onCommuteChange(parsed);
+              }
+            }}
+            className="w-16 rounded border border-emerald-400 bg-white px-2 py-1 text-sm tabular-nums"
+          />
         </div>
         <p className="mt-2 text-xs text-emerald-900/80">
-          Every class is padded by this on both sides. Drag it and watch how much
-          work time disappears for reasons that have nothing to do with class.
+          Each class is padded by this on both sides, before and after. The box
+          takes up to {COMMUTE_MAX} minutes.
         </p>
       </div>
 
@@ -186,18 +254,37 @@ export default function Controls(props: Props) {
             {props.minShiftMinutes} min
           </span>
         </div>
-        <input
-          id="minshift"
-          type="range"
-          min={30}
-          max={180}
-          step={5}
-          value={props.minShiftMinutes}
-          onChange={(event) => props.onMinShiftChange(Number(event.target.value))}
-          className="mt-2 w-full cursor-pointer accent-slate-600"
-        />
+        <div className="mt-2 flex items-center gap-3">
+          <input
+            id="minshift"
+            type="range"
+            min={30}
+            max={MIN_SHIFT_SLIDER_MAX}
+            step={5}
+            value={clampMinutes(props.minShiftMinutes, MIN_SHIFT_SLIDER_MAX)}
+            onChange={(event) => props.onMinShiftChange(Number(event.target.value))}
+            className="flex-1 cursor-pointer accent-slate-600"
+          />
+          <input
+            type="number"
+            min={0}
+            max={MIN_SHIFT_MAX}
+            step={5}
+            aria-label="Shortest shift in minutes"
+            value={props.minShiftMinutes}
+            onFocus={selectOnFocus}
+            onChange={(event) => {
+              const parsed = parseMinutes(event.target.value, MIN_SHIFT_MAX);
+              if (parsed !== null) {
+                props.onMinShiftChange(parsed);
+              }
+            }}
+            className="w-16 rounded border border-slate-300 bg-white px-2 py-1 text-sm tabular-nums"
+          />
+        </div>
         <p className="mt-1 text-xs text-slate-500">
-          Free gaps shorter than this are thrown away, not counted.
+          Free time shorter than this is not counted as workable. The box takes
+          up to {MIN_SHIFT_MAX} minutes.
         </p>
       </div>
 
@@ -216,10 +303,12 @@ export default function Controls(props: Props) {
             type="number"
             min={0}
             max={60}
+            placeholder="clear to hide target"
             value={props.targetHoursPerWeek}
-            onChange={(event) => props.onTargetChange(Number(event.target.value))}
+            onChange={(event) => props.onTargetChange(event.target.value)}
             className="mt-1 w-full rounded border border-slate-300 px-2 py-1"
           />
+          <p className="mt-1 text-xs text-slate-500">Clear it to rank without a target.</p>
         </div>
         <div className="rounded-lg border border-slate-200 p-4">
           <label htmlFor="wage" className="text-sm font-medium text-slate-700">

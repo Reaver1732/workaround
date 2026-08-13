@@ -109,8 +109,8 @@ export default function ScheduleList(props: Props) {
           </div>
           <div className="flex items-center gap-2">
             {targetBadge}
-            <span className="text-xs text-rose-600 tabular-nums">
-              {humanMinutes(candidate.work.fragmentedMinutes)} wasted
+            <span className="text-xs text-slate-500 tabular-nums">
+              {humanMinutes(candidate.work.fragmentedMinutes)} too short to work
             </span>
           </div>
         </div>

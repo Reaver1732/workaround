@@ -245,7 +245,7 @@ export interface Band extends Interval {
   kind: BandKind;
   // Short text drawn inside the band when it is tall enough.
   label: string;
-  // Hover text. Slivers explain why they are worthless.
+  // Hover text. Short blocks state their length and the minimum they missed.
   tooltip: string;
 }
 
@@ -324,10 +324,10 @@ export function buildDayBands(
             start: pieces[k].start,
             end: pieces[k].end,
             kind: 'buffer',
-            label: 'commute',
+            label: 'drive time',
             tooltip:
-              `${humanMinutes(pieces[k].end - pieces[k].start)} of commute buffer. ` +
-              `You cannot be at work during this.`,
+              `${humanMinutes(pieces[k].end - pieces[k].start)} of drive time, ` +
+              `before or after class.`,
           });
         }
       }
@@ -356,9 +356,9 @@ export function buildDayBands(
           kind: 'sliver',
           label: humanMinutes(length),
           tooltip:
-            `Wasted: ${humanMinutes(length)} free between ${toTimeValue(scrap.start)} and ` +
-            `${toTimeValue(scrap.end)}, but your shortest shift is ${minShiftMinutes} minutes. ` +
-            `Nobody schedules you for ${length} minutes, so this counts as zero.`,
+            `${humanMinutes(length)} free between ${toTimeValue(scrap.start)} and ` +
+            `${toTimeValue(scrap.end)}. Shorter than your ${minShiftMinutes} minute minimum, ` +
+            `so it is not counted.`,
         });
       }
     }
@@ -394,9 +394,9 @@ export function rankReason(
   }
 
   if (candidate.work.fragmentedMinutes > 0) {
-    parts.push(`${humanMinutes(candidate.work.fragmentedMinutes)} lost to unusable slivers`);
+    parts.push(`${humanMinutes(candidate.work.fragmentedMinutes)} too short to work`);
   } else {
-    parts.push('nothing wasted on slivers');
+    parts.push('no free time too short to work');
   }
 
   if (targetHoursPerWeek !== undefined && candidate.meetsTarget === false) {

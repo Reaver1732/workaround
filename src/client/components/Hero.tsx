@@ -1,13 +1,16 @@
 /**
- * The number that has to move when the commute slider moves, and directly
+ * The number that has to move when the drive time slider moves, and directly
  * underneath it the number that makes the point.
  *
  * The gap between "best available" and "what you actually registered for" IS
  * the product. Both recompute on every slider change, so the gap is never a
  * stale figure from some earlier setting.
  *
- * The commute cost line scores the SAME schedule at a zero-minute commute, so
- * it is like-for-like and not a comparison against a different schedule.
+ * The drive time line scores the SAME schedule at zero drive time, so it is
+ * like-for-like and not a comparison against a different schedule.
+ *
+ * Hours lead and dollars follow, labelled as an estimate of what those hours
+ * could earn. A tester read an unlabelled currency figure as a bill they owed.
  */
 
 import { humanMinutes } from '../model';
@@ -22,7 +25,8 @@ interface Props {
   registered: WorkHoursResult | null;
   commuteMinutes: number;
   hourlyWage: number | undefined;
-  targetHoursPerWeek: number;
+  // Undefined when the target field has been cleared.
+  targetHoursPerWeek: number | undefined;
 }
 
 function money(value: number): string {
@@ -44,27 +48,34 @@ export default function Hero(props: Props) {
   const lostMinutes = props.bestWithoutCommute.totalMinutes - props.best.totalMinutes;
 
   let targetBadge = null;
-  if (hours >= props.targetHoursPerWeek) {
-    targetBadge = (
-      <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
-        clears your {props.targetHoursPerWeek}h target
-      </span>
-    );
-  } else {
-    const short = Math.round((props.targetHoursPerWeek - hours) * 10) / 10;
-    targetBadge = (
-      <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-xs font-medium text-rose-300">
-        {short}h short of your {props.targetHoursPerWeek}h target
-      </span>
-    );
+  if (props.targetHoursPerWeek !== undefined) {
+    if (hours >= props.targetHoursPerWeek) {
+      targetBadge = (
+        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-300">
+          clears your {props.targetHoursPerWeek}h target
+        </span>
+      );
+    } else {
+      const short = Math.round((props.targetHoursPerWeek - hours) * 10) / 10;
+      targetBadge = (
+        <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-xs font-medium text-rose-300">
+          {short}h short of your {props.targetHoursPerWeek}h target
+        </span>
+      );
+    }
   }
 
+  // Dollars never appear as a bare figure: they are always the earnings those
+  // hours could produce, at the wage the student typed.
   let payLine = null;
   if (props.hourlyWage !== undefined && props.best.estimatedWeeklyPay !== undefined) {
     payLine = (
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-emerald-400">
-        {money(props.best.estimatedWeeklyPay)}
-        <span className="ml-1 text-sm font-normal text-slate-400">/ week</span>
+      <div className="mt-2 text-sm text-slate-400">
+        Could earn about{' '}
+        <span className="text-2xl font-semibold tabular-nums text-emerald-400">
+          {money(props.best.estimatedWeeklyPay)}
+        </span>{' '}
+        a week at {money(props.hourlyWage)} an hour.
       </div>
     );
   }
@@ -90,17 +101,17 @@ export default function Hero(props: Props) {
       if (props.hourlyWage !== undefined) {
         gapPay = (
           <span className="tabular-nums">
-            {' '}and {money((gapMinutes / 60) * props.hourlyWage)} a week
+            , about {money((gapMinutes / 60) * props.hourlyWage)} more a week
           </span>
         );
       }
       verdict = (
         <div className="mt-2 rounded-lg bg-amber-400/15 px-3 py-2 text-sm text-amber-200">
-          Changing sections would give you{' '}
+          Changing sections adds{' '}
           <span className="font-bold tabular-nums text-amber-100">
             {humanMinutes(gapMinutes)}
           </span>{' '}
-          more work a week{gapPay}. Same five courses.
+          of work time a week{gapPay}. Same five courses.
         </div>
       );
     } else if (gapMinutes === 0) {
@@ -132,7 +143,7 @@ export default function Hero(props: Props) {
           </span>
         </div>
         <div className="mt-1 text-xs text-slate-500">
-          {humanMinutes(props.registered.fragmentedMinutes)} of it wasted in slivers too
+          {humanMinutes(props.registered.fragmentedMinutes)} of it falls in blocks too
           short to work.
         </div>
         {verdict}
@@ -144,9 +155,9 @@ export default function Hero(props: Props) {
   if (props.commuteMinutes > 0 && lostMinutes > 0) {
     costLine = (
       <div className="mt-4 rounded-lg bg-rose-950/60 px-3 py-2 text-sm text-rose-200">
-        A {props.commuteMinutes} minute commute is costing you{' '}
-        <span className="font-bold tabular-nums">{humanMinutes(lostMinutes)}</span> of work a
-        week, even on the best schedule.
+        {props.commuteMinutes} minutes of drive time each way accounts for{' '}
+        <span className="font-bold tabular-nums">{humanMinutes(lostMinutes)}</span> a week on
+        this schedule.
       </div>
     );
   }
@@ -166,11 +177,14 @@ export default function Hero(props: Props) {
           </span>
           <span className="text-xl text-slate-400">hours / week</span>
         </div>
+        <p className="mt-2 text-sm text-slate-300">
+          Hours you could work each week around these classes.
+        </p>
         {payLine}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {targetBadge}
           <span className="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300">
-            {humanMinutes(props.best.fragmentedMinutes)} wasted in slivers
+            {humanMinutes(props.best.fragmentedMinutes)} too short to work
           </span>
         </div>
       </div>

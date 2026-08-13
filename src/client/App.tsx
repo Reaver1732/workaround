@@ -38,6 +38,9 @@ const TERM = 'FALL2026';
 /** Prefilled so the weekly dollar figure is on screen at load. Editable. */
 const DEFAULT_WAGE = '15';
 
+/** Prefilled, and clearable: an empty target ranks on hours alone. */
+const DEFAULT_TARGET = '15';
+
 /**
  * The sample student, applied before anything is fetched. A judge opening
  * this should never see an empty form: results are on screen the moment the
@@ -58,7 +61,9 @@ export default function App() {
   const [availability, setAvailability] = useState<AvailabilityMap>(sampleAvailability());
   const [commuteMinutes, setCommuteMinutes] = useState(20);
   const [minShiftMinutes, setMinShiftMinutes] = useState(90);
-  const [targetHoursPerWeek, setTargetHoursPerWeek] = useState(15);
+  // Both of these are raw text: the fields have to survive being emptied
+  // mid-edit, and an empty one means "do not apply this at all".
+  const [targetHoursPerWeek, setTargetHoursPerWeek] = useState(DEFAULT_TARGET);
   const [hourlyWage, setHourlyWage] = useState(DEFAULT_WAGE);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -115,6 +120,19 @@ export default function App() {
     return value;
   }, [hourlyWage]);
 
+  // Undefined when the field is empty, which the solver reads as no target:
+  // schedules are still ranked, just never marked short.
+  const parsedTarget = useMemo(() => {
+    if (targetHoursPerWeek.trim() === '') {
+      return undefined;
+    }
+    const value = Number(targetHoursPerWeek);
+    if (Number.isFinite(value) === false || value < 0) {
+      return undefined;
+    }
+    return value;
+  }, [targetHoursPerWeek]);
+
   const result = useMemo(() => {
     if (courses === null) {
       return null;
@@ -124,9 +142,9 @@ export default function App() {
       commuteMinutes,
       minShiftMinutes,
       hourlyWage: parsedWage,
-      targetHoursPerWeek,
+      targetHoursPerWeek: parsedTarget,
     });
-  }, [courses, selection, availability, commuteMinutes, minShiftMinutes, parsedWage, targetHoursPerWeek]);
+  }, [courses, selection, availability, commuteMinutes, minShiftMinutes, parsedWage, parsedTarget]);
 
   // Keep the selection in range when the ranking changes underneath it.
   const safeIndex = useMemo(() => {
@@ -294,7 +312,7 @@ export default function App() {
             registered={registeredWork}
             commuteMinutes={commuteMinutes}
             hourlyWage={parsedWage}
-            targetHoursPerWeek={targetHoursPerWeek}
+            targetHoursPerWeek={parsedTarget}
           />
         </div>
 
@@ -314,7 +332,7 @@ export default function App() {
             schedules={result.schedules}
             selectedIndex={safeIndex}
             onSelect={setSelectedIndex}
-            targetHoursPerWeek={targetHoursPerWeek}
+            targetHoursPerWeek={parsedTarget}
             sectionNames={sectionNames}
             registeredPin={registeredPin}
           />
@@ -342,9 +360,9 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[396px_1fr] lg:gap-4 lg:py-4 xl:min-h-0 xl:flex-1 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
-        {/* 396px, not 380: the scrollbar takes 15 of them and the day rows
-            below need 373 to sit on one line. */}
+      <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-6 lg:grid-cols-[412px_1fr] lg:gap-4 lg:py-3 xl:min-h-0 xl:flex-1 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
+        {/* 412px: the day rows below need 394 at the 17px base size, and the
+            scrollbar takes another 15. */}
         <aside className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto xl:max-h-none xl:min-h-0 xl:self-auto">
           <Controls
             commuteMinutes={commuteMinutes}
@@ -363,7 +381,7 @@ export default function App() {
           />
         </aside>
 
-        <section className="grid min-w-0 grid-cols-1 gap-6 lg:gap-4 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_400px] xl:grid-rows-[auto_minmax(0,1fr)]">
+        <section className="grid min-w-0 grid-cols-1 gap-6 lg:gap-3 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_420px] xl:grid-rows-[auto_minmax(0,1fr)]">
           {mainColumn}
         </section>
       </main>

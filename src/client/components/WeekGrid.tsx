@@ -2,12 +2,12 @@
  * The week, with four visually distinct states:
  *
  *   class    solid indigo
- *   buffer   amber diagonal hatch, the commute
+ *   buffer   amber diagonal hatch, the drive
  *   usable   solid emerald, a shift you could actually take
- *   sliver   rose counter-hatch, free time too short to be worth anything
+ *   sliver   rose counter-hatch, free time under the minimum shift
  *
- * The sliver tooltip is the point of the whole picture: it says how long the
- * gap is and why it is worth nothing.
+ * The short-block tooltip says how long the gap is and which minimum it fell
+ * under.
  */
 
 import { DAY_NAMES } from '../model';
@@ -18,10 +18,50 @@ interface Props {
   minShiftMinutes: number;
 }
 
-// Drawn window: 7:00 AM to 10:00 PM.
-const WINDOW_START = 420;
-const WINDOW_END = 1320;
-const WINDOW_SPAN = WINDOW_END - WINDOW_START;
+// Fallback window, 7:00 AM to 10:00 PM, used only when there is nothing to
+// draw. The real window comes from the data, see windowFor.
+const DEFAULT_START = 420;
+const DEFAULT_END = 1320;
+
+// Below this the grid is all label and no picture.
+const MIN_SPAN = 240;
+
+/**
+ * The drawn range, from the union of every band on the grid.
+ *
+ * A fixed window silently drops work windows that fall outside it: an evening
+ * shift ending at 11pm rendered off the bottom of a grid that stopped at 10.
+ * Rounded out to whole hours so the hour lines still land on the hour.
+ */
+function windowFor(days: DayBands[]): { start: number; end: number } {
+  let earliest = -1;
+  let latest = -1;
+
+  for (let i = 0; i < days.length; i++) {
+    const bands = days[i].bands;
+    for (let j = 0; j < bands.length; j++) {
+      if (earliest === -1 || bands[j].start < earliest) {
+        earliest = bands[j].start;
+      }
+      if (latest === -1 || bands[j].end > latest) {
+        latest = bands[j].end;
+      }
+    }
+  }
+
+  if (earliest === -1 || latest === -1) {
+    return { start: DEFAULT_START, end: DEFAULT_END };
+  }
+
+  const start = Math.floor(earliest / 60) * 60;
+  let end = Math.ceil(latest / 60) * 60;
+
+  if (end - start < MIN_SPAN) {
+    end = start + MIN_SPAN;
+  }
+
+  return { start, end };
+}
 
 // Painting order, so classes end up on top of their own buffers.
 const LAYER_ORDER: Record<string, number> = {
@@ -42,9 +82,9 @@ function percent(value: number): string {
   return `${(value * 100).toFixed(3)}%`;
 }
 
-function renderBand(band: Band, key: string) {
-  const top = (band.start - WINDOW_START) / WINDOW_SPAN;
-  const height = (band.end - band.start) / WINDOW_SPAN;
+function renderBand(band: Band, key: string, windowStart: number, windowSpan: number) {
+  const top = (band.start - windowStart) / windowSpan;
+  const height = (band.end - band.start) / windowSpan;
   const tall = band.end - band.start >= 45;
 
   let label = null;
@@ -65,10 +105,14 @@ function renderBand(band: Band, key: string) {
 }
 
 export default function WeekGrid(props: Props) {
+  const window = windowFor(props.days);
+  const windowSpan = window.end - window.start;
+
   const hourLines = [];
-  for (let minute = WINDOW_START; minute <= WINDOW_END; minute += 60) {
-    const top = (minute - WINDOW_START) / WINDOW_SPAN;
-    const hour24 = Math.floor(minute / 60);
+  for (let minute = window.start; minute <= window.end; minute += 60) {
+    const top = (minute - window.start) / windowSpan;
+    // Modulo 24 so a grid that runs to midnight labels it 12am, not 12pm.
+    const hour24 = Math.floor(minute / 60) % 24;
     let label = `${hour24 % 12}`;
     if (hour24 % 12 === 0) {
       label = '12';
@@ -95,7 +139,7 @@ export default function WeekGrid(props: Props) {
     const sorted = day.bands.slice().sort((a, b) => LAYER_ORDER[a.kind] - LAYER_ORDER[b.kind]);
     const bandNodes = [];
     for (let j = 0; j < sorted.length; j++) {
-      bandNodes.push(renderBand(sorted[j], `${day.day}-${j}`));
+      bandNodes.push(renderBand(sorted[j], `${day.day}-${j}`, window.start, windowSpan));
     }
 
     columns.push(
@@ -123,7 +167,7 @@ export default function WeekGrid(props: Props) {
           </span>
           <span className="flex items-center gap-1">
             <span className="band-buffer inline-block h-3 w-3 rounded-sm border border-amber-400" />
-            commute buffer
+            drive time
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block h-3 w-3 rounded-sm border border-emerald-600 bg-emerald-500" />
@@ -131,7 +175,7 @@ export default function WeekGrid(props: Props) {
           </span>
           <span className="flex items-center gap-1">
             <span className="band-sliver inline-block h-3 w-3 rounded-sm border border-dashed border-rose-400" />
-            wasted sliver
+            too short to work
           </span>
         </div>
       </div>
@@ -142,8 +186,8 @@ export default function WeekGrid(props: Props) {
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        Hover any band for detail. Slivers are free time under {props.minShiftMinutes} minutes,
-        which counts as zero.
+        Hover any band for detail. Free time under {props.minShiftMinutes} minutes is not
+        counted as workable.
       </p>
     </div>
   );

@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+/* Up from the 16px browser default. Testers found the default hard to read at
+   laptop distance; every size in the app is rem-based and scales with this. */
+html {
+  font-size: 17px;
+}
+
 /* The four week-grid states have to be distinguishable at a glance and in a
    screen recording, so two of them carry a texture rather than just a hue. */
 .band-buffer {
